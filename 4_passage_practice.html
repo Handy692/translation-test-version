@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>英语翻译练习网站 - 整篇练习</title>
+    <link rel="stylesheet" href="styles.css?v=4">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-left">
+                <h1>英语翻译练习</h1>
+                <div class="timer" id="timer">00:00:00</div>
+            </div>
+            <div class="header-right">
+                <a href="index.html" class="home-btn flat-btn" title="返回主页">🏠</a>
+                <a href="wordbook.html" id="wordbook-icon" class="wordbook-icon" title="单词本">📚</a>
+                <a href="translation-history.html" id="history-icon" class="history-btn flat-btn" title="翻译历史">📜</a>
+            </div>
+        </header>
+
+        <!-- 整篇练习区域 -->
+        <section id="passage-practice" class="active">
+            <h2>整篇翻译练习</h2>
+            <div class="passage-container">
+                <div class="chinese-passage" id="chinese-passage"></div>
+                <textarea id="passage-input" placeholder="请输入英文翻译..." rows="10"></textarea>
+                <div class="action-buttons">
+                    <button id="passage-complete-btn" class="complete-btn">
+                        完成翻译
+                    </button>
+                    <button id="back-to-mode" class="action-btn">返回模式选择</button>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- 版权信息 -->
+    <footer class="footer">
+        <p class="copyright">本网页由AI生成，生成者本人不懂网页开发，最初目标只是自用，大神海涵</p>
+    </footer>
+
+    <script src="script.js?v=4"></script>
+    <script src="config.js"></script>
+    <script src="tencent-translation.js"></script>
+    <!-- 主题切换按钮 -->
+    <button id="theme-toggle-btn" class="theme-toggle-btn" title="更换主题" aria-label="更换主题" aria-expanded="false">🎨</button>
+    
+    <!-- 模式切换按钮 -->
+    <button id="mode-toggle-btn" class="mode-toggle-btn" title="切换黑暗/白天模式" aria-label="切换黑暗/白天模式" aria-pressed="false">🌙</button>
+    
+    <!-- 主题选择面板 -->
+    <div id="theme-panel" class="theme-panel hidden" role="menu" aria-labelledby="theme-toggle-btn">
+        <div class="theme-panel-header">
+            <h3>选择主题</h3>
+            <button id="close-theme-panel" class="close-btn" aria-label="关闭主题面板">&times;</button>
+        </div>
+        <div class="theme-colors">
+            <h4>主题颜色</h4>
+            <div class="color-options">
+                <button class="color-option" data-color="blue" style="background-color: #2196F3" title="蓝色主题" aria-pressed="false"></button>
+                <button class="color-option" data-color="red" style="background-color: #F44336" title="红色主题" aria-pressed="false"></button>
+                <button class="color-option" data-color="yellow" style="background-color: #FFC107" title="黄色主题" aria-pressed="false"></button>
+                <button class="color-option" data-color="green" style="background-color: #4CAF50" title="绿色主题" aria-pressed="false"></button>
+                <button class="color-option" data-color="purple" style="background-color: #9C27B0" title="紫色主题" aria-pressed="false"></button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

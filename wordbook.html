@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>单词本 - 英语翻译练习网站</title>
+    <link rel="stylesheet" href="styles.css?v=4">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-left">
+                <h1>英语翻译练习</h1>
+                <div class="timer" id="timer" style="display: none;">00:00:00</div>
+            </div>
+            <div class="header-right">
+                <a href="index.html" class="home-btn flat-btn" title="返回主页">🏠</a>
+                <a href="javascript:void(0)" id="back-to-main" class="wordbook-icon" title="返回练习" onclick="handleBackToPractice()">🔙</a>
+                <a href="translation-history.html" id="history-icon" class="history-btn flat-btn" title="翻译历史">📜</a>
+            </div>
+        </header>
+
+        <!-- 单词本页面 -->
+        <section id="wordbook-section" class="active">
+            <h2>单词本</h2>
+            <div class="wordbook-controls">
+                <div class="search-container">
+                    <input type="text" id="word-search" placeholder="搜索单词...">
+                    <select id="word-sort">
+                        <option value="alphabetical">按字母排序</option>
+                        <option value="recent">按添加时间排序</option>
+                        <option value="frequency">按频率排序</option>
+                    </select>
+                </div>
+                <div class="import-export-buttons">
+                    <input type="file" id="import-excel" accept=".xlsx,.csv" style="display: none;">
+                    <button id="import-excel-btn" class="action-btn">导入Excel/CSV</button>
+                    <button id="export-excel-btn" class="action-btn">导出Excel</button>
+                    <button id="clear-wordbook-btn" class="action-btn">清空单词本</button>
+                </div>
+            </div>
+            <div class="wordbook-stats">
+                <p>共 <span id="total-words">0</span> 个单词</p>
+            </div>
+            <div class="word-cards-container" id="word-cards-container">
+                <!-- 单词卡将通过JavaScript动态生成 -->
+            </div>
+            <div class="action-buttons">
+                <a href="javascript:void(0)" class="back-btn flat-btn" onclick="handleBackToPractice()">返回练习</a>
+            </div>
+        </section>
+    </div>
+
+    <!-- 版权信息 -->
+    <footer class="footer">
+        <p class="copyright">本网页由AI生成，生成者本人不懂网页开发，最初目标只是自用，大神海涵</p>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="html2canvas.min.js"></script>
+    <script src="script.js?v=4"></script>
+    <!-- 主题切换按钮 -->
+    <button id="theme-toggle-btn" class="theme-toggle-btn" title="更换主题" aria-label="更换主题" aria-expanded="false">🎨</button>
+    
+    <!-- 模式切换按钮 -->
+    <button id="mode-toggle-btn" class="mode-toggle-btn" title="切换黑暗/白天模式" aria-label="切换黑暗/白天模式" aria-pressed="false">🌙</button>
+    
+    <!-- 主题选择面板 -->
+    <div id="theme-panel" class="theme-panel hidden" role="menu" aria-labelledby="theme-toggle-btn">
+        <div class="theme-panel-header">
+            <h3>选择主题</h3>
+            <button id="close-theme-panel" class="close-btn" aria-label="关闭主题面板">&times;</button>
+        </div>
+        <div class="theme-colors">
+            <h4>主题颜色</h4>
+            <div class="color-options">
+                <button class="color-option" data-color="blue" style="background-color: #2196F3" title="蓝色主题" aria-pressed="false"></button>
+                <button class="color-option" data-color="red" style="background-color: #F44336" title="红色主题" aria-pressed="false"></button>
+                <button class="color-option" data-color="yellow" style="background-color: #FFC107" title="黄色主题" aria-pressed="false"></button>
+                <button class="color-option" data-color="green" style="background-color: #4CAF50" title="绿色主题" aria-pressed="false"></button>
+                <button class="color-option" data-color="purple" style="background-color: #9C27B0" title="紫色主题" aria-pressed="false"></button>
+            </div>
+        </div>
+    </div>
+    <script>
+        // 单词本页面初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 确保wordbook变量可用
+            window.wordbook = JSON.parse(localStorage.getItem('wordbook')) || [];
+            window.filteredWords = [...window.wordbook];
+            
+            // 渲染单词卡
+            renderWordCards();
+            
+            // 更新统计信息
+            updateWordbookStats();
+            
+            // 添加事件监听器
+            const wordSearch = document.getElementById('word-search');
+            const wordSort = document.getElementById('word-sort');
+            const importExcelBtn = document.getElementById('import-excel-btn');
+            const exportExcelBtn = document.getElementById('export-excel-btn');
+            const clearWordbookBtn = document.getElementById('clear-wordbook-btn');
+            const importExcel = document.getElementById('import-excel');
+            
+            wordSearch.addEventListener('input', handleSearchAndSort);
+            wordSort.addEventListener('change', handleSearchAndSort);
+            clearWordbookBtn.addEventListener('click', clearWordbook);
+            exportExcelBtn.addEventListener('click', exportExcel);
+            importExcelBtn.addEventListener('click', () => importExcel.click());
+            importExcel.addEventListener('change', importExcelFile);
+        });
+        
+        // 处理返回练习功能
+        function handleBackToPractice() {
+            try {
+                // 使用PageTransition的历史记录系统获取上一个页面
+                if (window.PageTransition && window.PageTransition.history) {
+                    const previousPage = window.PageTransition.history.getPrevious();
+                    
+                    if (previousPage && previousPage !== window.location.pathname) {
+                        // 使用PageTransition进行页面跳转
+                        window.PageTransition.navigateTo(previousPage);
+                    } else {
+                        // 如果没有历史记录，返回到主页面
+                        window.PageTransition.navigateTo('index.html');
+                    }
+                } else {
+                    // 如果PageTransition不可用，使用默认返回逻辑
+                    window.history.back();
+                }
+            } catch (error) {
+                console.error('返回练习失败:', error);
+                // 出错时返回到主页面
+                window.location.href = 'index.html';
+            }
+        }
+        
+        // 渲染单词卡
+        function renderWordCards() {
+            const wordCardsContainer = document.getElementById('word-cards-container');
+            const wordbook = JSON.parse(localStorage.getItem('wordbook')) || [];
+            
+            wordCardsContainer.innerHTML = '';
+            
+            if (window.filteredWords.length === 0) {
+                wordCardsContainer.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 50px;">单词本为空</p>';
+                return;
+            }
+            
+            window.filteredWords.forEach((wordData, index) => {
+                const wordCard = document.createElement('div');
+                wordCard.className = 'word-card';
+                
+                // 获取主要释义
+                const mainMeaning = wordData.meanings?.[0];
+                const mainDefinition = mainMeaning?.definition || '';
+                const mainChinese = mainMeaning?.chinese || '';
+                const partOfSpeech = mainMeaning?.partOfSpeech || '';
+                
+                // 获取例句
+                const examples = wordData.examples || [];
+                const examplesHTML = examples.slice(0, 3).map(ex => `
+                    <div class="example">
+                        <div class="example-english">${ex.english || ''}</div>
+                        <div class="example-chinese">${ex.chinese || ''}</div>
+                        ${ex.context ? `<div class="example-context"><small>语境: ${ex.context}</small></div>` : ''}
+                    </div>
+                `).join('');
+                
+                // 获取使用信息
+                const usage = wordData.usage || {};
+                const usageHTML = `
+                    <div class="usage-info">
+                        ${usage.frequency ? `<small>频率: ${usage.frequency}</small>` : ''}
+                        ${usage.register ? `<small>语体: ${usage.register}</small>` : ''}
+                        ${usage.type ? `<small>类型: ${usage.type}</small>` : ''}
+                        ${usage.commonUsage ? `<small>用法: ${usage.commonUsage}</small>` : ''}
+                    </div>
+                `;
+                
+                wordCard.innerHTML = `
+                    <div class="word-card-inner">
+                        <div class="word-card-front">
+                            <button class="remove-btn" data-index="${index}">×</button>
+                            <h3>${wordData.word}</h3>
+                            ${wordData.phonetic ? `<div class="phonetic">${wordData.phonetic}</div>` : ''}
+                            ${partOfSpeech ? `<div class="part-of-speech">${partOfSpeech}</div>` : ''}
+                            <p>点击查看详情</p>
+                        </div>
+                        <div class="word-card-back">
+                            <button class="remove-btn" data-index="${index}">×</button>
+                            <h3>${wordData.word}</h3>
+                            ${wordData.phonetic ? `<div class="phonetic">${wordData.phonetic}</div>` : ''}
+                            ${partOfSpeech ? `<div class="part-of-speech">${partOfSpeech}</div>` : ''}
+                            
+                            <div class="meaning-section">
+                                <div class="definition">
+                                    ${mainChinese ? `<strong>中文释义:</strong> ${mainChinese}` : ''}
+                                    ${mainDefinition ? `<div><strong>英文释义:</strong> ${mainDefinition}</div>` : ''}
+                                </div>
+                            </div>
+                            
+                            ${examplesHTML ? `
+                                <div class="examples-section">
+                                    <strong>例句:</strong>
+                                    ${examplesHTML}
+                                </div>
+                            ` : ''}
+                            
+                            ${usageHTML ? `
+                                <div class="usage-section">
+                                    ${usageHTML}
+                                </div>
+                            ` : ''}
+                            
+                            <div class="word-meta">
+                                <small>添加于: ${new Date(wordData.addedAt).toLocaleDateString()}</small>
+                                <small>查看次数: ${wordData.frequency || 0}</small>
+                                ${wordData.source ? `<small>来源: ${wordData.source}</small>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                wordCardsContainer.appendChild(wordCard);
+                
+                // 添加翻转事件
+                wordCard.addEventListener('click', (e) => {
+                    // 如果点击的是删除按钮，不翻转
+                    if (e.target.classList.contains('remove-btn')) return;
+                    wordCard.classList.toggle('flipped');
+                });
+                
+                // 添加删除事件
+                const removeBtn = wordCard.querySelector('.remove-btn');
+                removeBtn.addEventListener('click', () => {
+                    removeWordFromWordbook(index);
+                });
+            });
+        }
+        
+        // 从单词本中删除单词
+        function removeWordFromWordbook(index) {
+            if (confirm('确定要从单词本中删除这个单词吗？')) {
+                const removedWord = window.filteredWords[index];
+                const wordbook = JSON.parse(localStorage.getItem('wordbook')) || [];
+                const actualIndex = wordbook.findIndex(w => w.word === removedWord.word);
+                if (actualIndex >= 0) {
+                    wordbook.splice(actualIndex, 1);
+                    localStorage.setItem('wordbook', JSON.stringify(wordbook));
+                    window.wordbook = wordbook;
+                    filterAndSortWords();
+                }
+            }
+        }
+        
+        // 过滤和排序单词
+        function filterAndSortWords() {
+            const wordSearch = document.getElementById('word-search');
+            const wordSort = document.getElementById('word-sort');
+            const wordbook = JSON.parse(localStorage.getItem('wordbook')) || [];
+            
+            const searchTerm = wordSearch.value.toLowerCase();
+            const sortBy = wordSort.value;
+            
+            // 过滤
+            window.filteredWords = wordbook.filter(word => 
+                word.word.toLowerCase().includes(searchTerm)
+            );
+            
+            // 排序
+            switch (sortBy) {
+                case 'alphabetical':
+                    window.filteredWords.sort((a, b) => a.word.localeCompare(b.word));
+                    break;
+                case 'recent':
+                    window.filteredWords.sort((a, b) => new Date(b.addedAt) - new Date(a.addedAt));
+                    break;
+                case 'frequency':
+                    window.filteredWords.sort((a, b) => b.frequency - a.frequency);
+                    break;
+            }
+            
+            renderWordCards();
+        }
+        
+        // 搜索和排序事件处理
+        function handleSearchAndSort() {
+            filterAndSortWords();
+        }
+        
+        // 清空单词本
+        function clearWordbook() {
+            if (confirm('确定要清空单词本吗？此操作不可恢复。')) {
+                localStorage.removeItem('wordbook');
+                window.wordbook = [];
+                window.filteredWords = [];
+                renderWordCards();
+                updateWordbookStats();
+            }
+        }
+        
+        // 导出Excel功能
+        function exportExcel() {
+            const wordbook = JSON.parse(localStorage.getItem('wordbook')) || [];
+            
+            if (wordbook.length === 0) {
+                alert('单词本为空，无法导出');
+                return;
+            }
+            
+            // 转换数据格式，包含完整信息
+            const exportData = wordbook.map(word => {
+                // 获取主要释义
+                const mainMeaning = word.meanings?.[0];
+                const mainDefinition = mainMeaning?.definition || '';
+                const mainChinese = mainMeaning?.chinese || '';
+                const partOfSpeech = mainMeaning?.partOfSpeech || '';
+                
+                // 获取例句
+                const examples = word.examples || [];
+                const example1 = examples[0]?.english || '';
+                const example1Chinese = examples[0]?.chinese || '';
+                const example2 = examples[1]?.english || '';
+                const example2Chinese = examples[1]?.chinese || '';
+                const example3 = examples[2]?.english || '';
+                const example3Chinese = examples[2]?.chinese || '';
+                
+                // 获取使用信息
+                const usage = word.usage || {};
+                const usageFrequency = usage.frequency || '';
+                const usageRegister = usage.register || '';
+                const usageType = usage.type || '';
+                const usageCommon = usage.commonUsage || '';
+                
+                return {
+                    '单词': word.word,
+                    '音标': word.phonetic || '',
+                    '词性': partOfSpeech,
+                    '中文释义': mainChinese,
+                    '英文释义': mainDefinition,
+                    '例句1': example1,
+                    '例句1翻译': example1Chinese,
+                    '例句2': example2,
+                    '例句2翻译': example2Chinese,
+                    '例句3': example3,
+                    '例句3翻译': example3Chinese,
+                    '使用频率': usageFrequency,
+                    '语体': usageRegister,
+                    '类型': usageType,
+                    '常用用法': usageCommon,
+                    '添加时间': new Date(word.addedAt).toLocaleString(),
+                    '查看次数': word.frequency || 0,
+                    '来源': word.source || ''
+                };
+            });
+            
+            // 转换为CSV格式
+            const headers = Object.keys(exportData[0]);
+            const csvContent = [
+                headers.join(','),
+                ...exportData.map(row => headers.map(header => `"${row[header]}"`).join(','))
+            ].join('\n');
+            
+            // 创建下载链接
+            const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `单词本_${new Date().toISOString().slice(0, 10)}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+        
+        // 导入Excel/CSV功能
+        function importExcelFile() {
+            const importExcel = document.getElementById('import-excel');
+            const file = importExcel.files[0];
+            if (!file) return;
+            
+            const fileExtension = file.name.split('.').pop().toLowerCase();
+            
+            if (fileExtension === 'csv') {
+                importCSVFile(file);
+            } else if (fileExtension === 'xlsx') {
+                importExcelFileXLSX(file);
+            } else {
+                alert('不支持的文件格式。请选择 .xlsx 或 .csv 文件。');
+                importExcel.value = '';
+            }
+        }
+        
+        // 导入CSV文件
+        function importCSVFile(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+                const lines = content.split('\n');
+                const headers = lines[0].split(',').map(h => h.replace(/"/g, ''));
+                
+                let importedCount = 0;
+                let existingCount = 0;
+                const wordbook = JSON.parse(localStorage.getItem('wordbook')) || [];
+                
+                for (let i = 1; i < lines.length; i++) {
+                    if (!lines[i].trim()) continue;
+                    
+                    const values = lines[i].split(',').map(v => v.replace(/"/g, ''));
+                    const wordData = {};
+                    
+                    headers.forEach((header, index) => {
+                        wordData[header] = values[index] || '';
+                    });
+                    
+                    // 检查是否为有效的单词数据
+                    if (wordData['单词']) {
+                        const existingWordIndex = wordbook.findIndex(w => w.word.toLowerCase() === wordData['单词'].toLowerCase());
+                        
+                        if (existingWordIndex >= 0) {
+                            existingCount++;
+                        } else {
+                            const newWord = createWordFromData(wordData);
+                            wordbook.push(newWord);
+                            importedCount++;
+                        }
+                    }
+                }
+                
+                saveImportedData(wordbook, importedCount, existingCount);
+            };
+            
+            reader.readAsText(file, 'UTF-8');
+        }
+        
+        // 导入Excel文件
+        function importExcelFileXLSX(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet);
+                    
+                    let importedCount = 0;
+                    let existingCount = 0;
+                    const wordbook = JSON.parse(localStorage.getItem('wordbook')) || [];
+                    
+                    jsonData.forEach(row => {
+                        if (row['单词']) {
+                            const existingWordIndex = wordbook.findIndex(w => w.word.toLowerCase() === row['单词'].toLowerCase());
+                            
+                            if (existingWordIndex >= 0) {
+                                existingCount++;
+                            } else {
+                                const newWord = createWordFromData(row);
+                                wordbook.push(newWord);
+                                importedCount++;
+                            }
+                        }
+                    });
+                    
+                    saveImportedData(wordbook, importedCount, existingCount);
+                } catch (error) {
+                    console.error('Excel文件解析失败:', error);
+                    alert('Excel文件解析失败，请检查文件格式是否正确。');
+                    document.getElementById('import-excel').value = '';
+                }
+            };
+            
+            reader.readAsArrayBuffer(file);
+        }
+        
+        // 从数据创建单词对象
+        function createWordFromData(wordData) {
+            const examples = [];
+            for (let j = 1; j <= 3; j++) {
+                const exampleKey = `例句${j}`;
+                const exampleTransKey = `例句${j}翻译`;
+                if (wordData[exampleKey]) {
+                    examples.push({
+                        english: wordData[exampleKey],
+                        chinese: wordData[exampleTransKey] || '',
+                        context: '导入数据'
+                    });
+                }
+            }
+            
+            return {
+                word: wordData['单词'],
+                phonetic: wordData['音标'] || '',
+                meanings: [{
+                    partOfSpeech: wordData['词性'] || 'unknown',
+                    definition: wordData['英文释义'] || '',
+                    chinese: wordData['中文释义'] || '',
+                    context: '导入数据'
+                }],
+                examples: examples,
+                usage: {
+                    frequency: wordData['使用频率'] || '',
+                    register: wordData['语体'] || '',
+                    type: wordData['类型'] || '',
+                    commonUsage: wordData['常用用法'] || ''
+                },
+                source: wordData['来源'] || 'import',
+                addedAt: new Date().toISOString(),
+                frequency: parseInt(wordData['查看次数']) || 1
+            };
+        }
+        
+        // 保存导入的数据并更新界面
+        function saveImportedData(wordbook, importedCount, existingCount) {
+            localStorage.setItem('wordbook', JSON.stringify(wordbook));
+            window.wordbook = wordbook;
+            filterAndSortWords();
+            updateWordbookStats();
+            alert(`导入完成！新添加 ${importedCount} 个单词，已存在 ${existingCount} 个单词`);
+            document.getElementById('import-excel').value = '';
+        }
+        
+        // 更新单词本统计信息
+        function updateWordbookStats() {
+            const totalWordsEl = document.getElementById('total-words');
+            const wordbook = JSON.parse(localStorage.getItem('wordbook')) || [];
+            totalWordsEl.textContent = wordbook.length;
+        }
+    </script>
+</body>
+</html>

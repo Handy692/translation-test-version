@@ -1,0 +1,21 @@
+{
+  "name": "translation-practice-api",
+  "version": "1.0.0",
+  "description": "英语翻译练习应用 - 后端API服务",
+  "main": "secure-translation-proxy.py",
+  "scripts": {
+    "start": "python secure-translation-proxy.py --https --https-port=8443"
+  },
+  "dependencies": {
+    "python": "3.8+"
+  },
+  "build": {
+    "command": "pip install -r requirements.txt"
+  },
+  "deploy": {
+    "healthcheck": {
+      "path": "/health",
+      "interval": 30
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "name": "translation-practice-api",
+  "build": {
+    "command": "pip install -r requirements.txt"
+  },
+  "deploy": {
+    "startCommand": "python secure-translation-proxy.py --https --https-port=8443",
+    "healthcheckPath": "/health",
+    "numInstances": 1,
+    "restartPolicy": {
+      "maxRetries": 10,
+      "condition": "on-failure"
+    }
+  },
+  "env": {
+    "TENCENT_SECRET_ID": {
+      "description": "腾讯云Secret ID"
+    },
+    "TENCENT_SECRET_KEY": {
+      "description": "腾讯云Secret Key"
+    },
+    "ENCRYPTION_KEY": {
+      "description": "加密密钥（用于API通信加密）"
+    }
+  }
+}

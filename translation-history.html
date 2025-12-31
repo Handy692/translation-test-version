@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>翻译历史 - 英语翻译练习网站</title>
+    <link rel="stylesheet" href="styles.css?v=4">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-left">
+                <h1>英语翻译练习</h1>
+                <div class="timer" id="timer" style="display: none;">00:00:00</div>
+            </div>
+            <div class="header-right">
+                <a href="index.html" class="home-btn flat-btn" title="返回主页">🏠</a>
+                <a href="wordbook.html" id="wordbook-icon" class="wordbook-icon" title="单词本">📚</a>
+                <a href="translation-history.html" id="history-icon" class="history-btn flat-btn" title="翻译历史">📜</a>
+            </div>
+        </header>
+
+        <!-- 翻译历史页面 -->
+        <section id="translation-history" class="active">
+            <h2>翻译历史</h2>
+            
+            <!-- 翻译文章历史版本区域 -->
+            <div class="history-section">
+                <h3>翻译文章历史版本</h3>
+                <div class="history-controls">
+                    <button id="export-history-btn" class="back-btn">导出历史数据</button>
+                    <label for="import-history-file" class="back-btn" style="cursor: pointer; display: inline-block; margin-left: 10px;">导入历史数据</label>
+                    <input type="file" id="import-history-file" accept=".json" style="display: none;">
+                    <button id="clear-history-versions-btn" class="back-btn" style="margin-left: 10px; background-color: #ff4444;">清空所有历史版本</button>
+                </div>
+                <div id="history-versions-list" class="history-list">
+                    <!-- 历史版本记录将通过JavaScript动态生成 -->
+                    <div class="no-history-message">暂无翻译文章历史版本记录</div>
+                </div>
+            </div>
+            
+            <!-- 历史翻译文章区域 -->
+            <div class="history-section">
+                <h3>历史翻译文章</h3>
+                <div class="history-controls">
+                    <button id="clear-history-files-btn" class="back-btn" style="background-color: #ff4444;">清空所有历史文件</button>
+                </div>
+                <div id="history-files-list" class="history-list">
+                    <!-- 历史文件记录将通过JavaScript动态生成 -->
+                    <div class="no-history-message">暂无历史翻译文章记录</div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- 版权信息 -->
+    <footer class="footer">
+        <p class="copyright">本网页由AI生成，生成者本人不懂网页开发，最初目标只是自用，大神海涵</p>
+    </footer>
+
+    <script src="script.js?v=4"></script>
+    <!-- 主题切换按钮 -->
+    <button id="theme-toggle-btn" class="theme-toggle-btn" title="更换主题" aria-label="更换主题" aria-expanded="false">🎨</button>
+    
+    <!-- 模式切换按钮 -->
+    <button id="mode-toggle-btn" class="mode-toggle-btn" title="切换黑暗/白天模式" aria-label="切换黑暗/白天模式" aria-pressed="false">🌙</button>
+    
+    <!-- 主题选择面板 -->
+    <div id="theme-panel" class="theme-panel hidden" role="menu" aria-labelledby="theme-toggle-btn">
+        <div class="theme-panel-header">
+            <h3>选择主题</h3>
+            <button id="close-theme-panel" class="close-btn" aria-label="关闭主题面板">&times;</button>
+        </div>
+        <div class="theme-colors">
+            <h4>主题颜色</h4>
+            <div class="color-options">
+                <button class="color-option" data-color="blue" style="background-color: #2196F3" title="蓝色主题" aria-pressed="false"></button>
+                <button class="color-option" data-color="red" style="background-color: #F44336" title="红色主题" aria-pressed="false"></button>
+                <button class="color-option" data-color="yellow" style="background-color: #FFC107" title="黄色主题" aria-pressed="false"></button>
+                <button class="color-option" data-color="green" style="background-color: #4CAF50" title="绿色主题" aria-pressed="false"></button>
+                <button class="color-option" data-color="purple" style="background-color: #9C27B0" title="紫色主题" aria-pressed="false"></button>
+            </div>
+        </div>
+    </div>
+    <script>
+        // 翻译历史页面特定功能
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始化翻译历史页面
+            initTranslationHistory();
+        });
+
+        // 初始化翻译历史页面
+        function initTranslationHistory() {
+            // 加载翻译历史数据
+            loadTranslationHistory();
+            
+            // 添加事件监听器
+            setupHistoryEventListeners();
+        }
+
+        // 加载翻译历史数据
+        function loadTranslationHistory() {
+            // 加载翻译文章历史版本
+            loadHistoryVersions();
+            
+            // 加载历史翻译文章
+            loadHistoryFiles();
+        }
+
+        // 加载翻译文章历史版本
+        function loadHistoryVersions() {
+            const historyList = document.getElementById('history-versions-list');
+            const versions = TranslationHistory.getHistoryVersions();
+            
+            if (versions.length === 0) {
+                historyList.innerHTML = '<div class="no-history-message">暂无翻译文章历史版本记录</div>';
+                return;
+            }
+            
+            historyList.innerHTML = versions.map(version => `
+                <div class="history-item">
+                    <div class="history-item-header">
+                        <h4>${version.filename || '未命名文件'}</h4>
+                        <span class="history-item-date">${new Date(version.timestamp).toLocaleString()}</span>
+                    </div>
+                    <div class="history-item-content">
+                        <p class="history-item-description">${version.description || '无描述'}</p>
+                        ${version.passageContent ? `<div class="history-item-passage"><strong>原文：</strong><p>${version.passageContent.substring(0, 200)}${version.passageContent.length > 200 ? '...' : ''}</p></div>` : ''}
+                        ${version.score !== null ? `<div class="history-item-score"><strong>评分：</strong>${version.score}/100</div>` : ''}
+                        ${version.aiEvaluation ? `<div class="history-item-ai-evaluation"><strong>AI评语：</strong><p>${version.aiEvaluation.substring(0, 300)}${version.aiEvaluation.length > 300 ? '...' : ''}</p></div>` : ''}
+                        <div class="history-item-actions">
+                            <button class="back-btn" onclick="loadHistoryVersion('${version.id}')">查看详情</button>
+                            <button class="back-btn" style="background-color: #ff4444;" onclick="deleteHistoryVersion('${version.id}')">删除</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 加载历史翻译文章
+        function loadHistoryFiles() {
+            const filesList = document.getElementById('history-files-list');
+            const files = TranslationHistory.getHistoryFiles();
+            
+            if (files.length === 0) {
+                filesList.innerHTML = '<div class="no-history-message">暂无历史翻译文章记录</div>';
+                return;
+            }
+            
+            filesList.innerHTML = files.map(file => `
+                <div class="history-item">
+                    <div class="history-item-header">
+                        <h4>${file.filename || '未命名文件'}</h4>
+                        <span class="history-item-date">${new Date(file.timestamp).toLocaleString()}</span>
+                    </div>
+                    <div class="history-item-content">
+                        <p class="history-item-description">${file.description || '无描述'}</p>
+                        <div class="history-item-actions">
+                            <button class="back-btn" onclick="reloadHistoryFile('${file.id}')">重新加载</button>
+                            <button class="back-btn" style="background-color: #ff4444;" onclick="deleteHistoryFile('${file.id}')">删除</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 设置历史事件监听器
+        function setupHistoryEventListeners() {
+            // 导出历史数据
+            document.getElementById('export-history-btn').addEventListener('click', exportHistoryData);
+            
+            // 导入历史数据
+            document.getElementById('import-history-file').addEventListener('change', importHistoryData);
+            
+            // 清空所有历史版本
+            document.getElementById('clear-history-versions-btn').addEventListener('click', clearAllHistoryVersions);
+            
+            // 清空所有历史文件
+            document.getElementById('clear-history-files-btn').addEventListener('click', clearAllHistoryFiles);
+        }
+
+        // 加载历史版本
+        function loadHistoryVersion(versionId) {
+            const versions = TranslationHistory.getHistoryVersions();
+            const version = versions.find(v => v.id === versionId);
+            
+            if (version) {
+                // 将历史版本数据保存到sessionStorage
+                sessionStorage.setItem('historyVersionToView', JSON.stringify(version));
+                
+                // 跳转到评价页面
+                window.location.href = '4_evaluation.html?historyVersion=true';
+            } else {
+                showMessage('未找到该历史版本记录', 'error');
+            }
+        }
+
+        // 删除历史版本
+        function deleteHistoryVersion(versionId) {
+            if (confirm('确定要删除此历史版本吗？')) {
+                if (TranslationHistory.deleteHistoryVersion(versionId)) {
+                    showMessage('历史版本删除成功！', 'success');
+                    loadHistoryVersions();
+                } else {
+                    showMessage('历史版本删除失败！', 'error');
+                }
+            }
+        }
+
+        // 重新加载历史文件
+        function reloadHistoryFile(fileId) {
+            const files = TranslationHistory.getHistoryFiles();
+            const file = files.find(f => f.id === fileId);
+            
+            if (file) {
+                // 将文件数据保存到sessionStorage，然后跳转到相应的练习页面
+                sessionStorage.setItem('reloadedHistoryFile', JSON.stringify(file));
+                showMessage('正在重新加载历史文件...', 'info');
+                // 跳转到上传页面，由上传页面处理重新加载逻辑
+                window.location.href = 'index.html?reloadFile=true';
+            }
+        }
+
+        // 删除历史文件
+        function deleteHistoryFile(fileId) {
+            if (confirm('确定要删除此历史文件吗？')) {
+                if (TranslationHistory.deleteHistoryFile(fileId)) {
+                    showMessage('历史文件删除成功！', 'success');
+                    loadHistoryFiles();
+                } else {
+                    showMessage('历史文件删除失败！', 'error');
+                }
+            }
+        }
+
+        // 清空所有历史版本
+        function clearAllHistoryVersions() {
+            if (confirm('确定要清空所有翻译文章历史版本吗？此操作不可恢复！')) {
+                if (TranslationHistory.clearAllHistoryVersions()) {
+                    showMessage('所有历史版本已清空！', 'success');
+                    loadHistoryVersions();
+                } else {
+                    showMessage('清空历史版本失败！', 'error');
+                }
+            }
+        }
+
+        // 清空所有历史文件
+        function clearAllHistoryFiles() {
+            if (confirm('确定要清空所有历史翻译文章吗？此操作不可恢复！')) {
+                if (TranslationHistory.clearAllHistoryFiles()) {
+                    showMessage('所有历史文件已清空！', 'success');
+                    loadHistoryFiles();
+                } else {
+                    showMessage('清空历史文件失败！', 'error');
+                }
+            }
+        }
+
+        // 导出历史数据
+        function exportHistoryData() {
+            const historyData = TranslationHistory.exportHistoryData();
+            
+            const dataStr = JSON.stringify(historyData, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `translation-history-${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+            URL.revokeObjectURL(url);
+            
+            showMessage('历史数据导出成功！', 'success');
+        }
+
+        // 导入历史数据
+        function importHistoryData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const historyData = JSON.parse(e.target.result);
+                    
+                    if (TranslationHistory.importHistoryData(historyData)) {
+                        showMessage('历史数据导入成功！', 'success');
+                        loadTranslationHistory();
+                    } else {
+                        showMessage('历史数据导入失败！', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error importing history data:', error);
+                    showMessage('历史数据导入失败！请检查文件格式是否正确。', 'error');
+                }
+            };
+            reader.readAsText(file);
+            
+            // 清空文件输入
+            event.target.value = '';
+        }
+
+        // 显示消息提示
+        function showMessage(message, type = 'info') {
+            // 创建消息元素
+            const messageEl = document.createElement('div');
+            messageEl.className = `message ${type}`;
+            messageEl.textContent = message;
+            
+            // 添加到页面
+            document.body.appendChild(messageEl);
+            
+            // 显示消息
+            setTimeout(() => {
+                messageEl.style.opacity = '1';
+            }, 100);
+            
+            // 3秒后隐藏消息
+            setTimeout(() => {
+                messageEl.style.opacity = '0';
+                setTimeout(() => {
+                    document.body.removeChild(messageEl);
+                }, 300);
+            }, 3000);
+        }
+        </script>
+</body>
+</html>

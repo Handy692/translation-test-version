@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  translation-api:
+    build: .
+    container_name: translation-practice-api
+    ports:
+      - "8002:8002"
+      - "8443:8443"
+    environment:
+      - TENCENT_SECRET_ID=${TENCENT_SECRET_ID}
+      - TENCENT_SECRET_KEY=${TENCENT_SECRET_KEY}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+    volumes:
+      - ./logs:/app/logs
+      - ./secure/keys:/app/secure/keys
+      - ./secure/certificates:/app/secure/certificates
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - translation-network
+
+networks:
+  translation-network:
+    driver: bridge
